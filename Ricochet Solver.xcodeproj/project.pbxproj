@@ -1,0 +1,198 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		DCCE564D1348FD8000021975 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DCCE564C1348FD8000021975 /* main.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DCCE56461348FD8000021975 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		DCCE56481348FD8000021975 /* Ricochet Solver */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Ricochet Solver"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DCCE564C1348FD8000021975 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		DCCE564E1348FD8000021975 /* Ricochet_Solver.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Ricochet_Solver.1; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DCCE56451348FD8000021975 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		DCCE563D1348FD8000021975 = {
+			isa = PBXGroup;
+			children = (
+				DCCE564B1348FD8000021975 /* Ricochet Solver */,
+				DCCE56491348FD8000021975 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DCCE56491348FD8000021975 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DCCE56481348FD8000021975 /* Ricochet Solver */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DCCE564B1348FD8000021975 /* Ricochet Solver */ = {
+			isa = PBXGroup;
+			children = (
+				DCCE564C1348FD8000021975 /* main.cpp */,
+				DCCE564E1348FD8000021975 /* Ricochet_Solver.1 */,
+			);
+			path = "Ricochet Solver";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DCCE56471348FD8000021975 /* Ricochet Solver */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DCCE56511348FD8000021975 /* Build configuration list for PBXNativeTarget "Ricochet Solver" */;
+			buildPhases = (
+				DCCE56441348FD8000021975 /* Sources */,
+				DCCE56451348FD8000021975 /* Frameworks */,
+				DCCE56461348FD8000021975 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Ricochet Solver";
+			productName = "Ricochet Solver";
+			productReference = DCCE56481348FD8000021975 /* Ricochet Solver */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		DCCE563F1348FD8000021975 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = DCCE56421348FD8000021975 /* Build configuration list for PBXProject "Ricochet Solver" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = DCCE563D1348FD8000021975;
+			productRefGroup = DCCE56491348FD8000021975 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DCCE56471348FD8000021975 /* Ricochet Solver */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DCCE56441348FD8000021975 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DCCE564D1348FD8000021975 /* main.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		DCCE564F1348FD8000021975 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		DCCE56501348FD8000021975 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		DCCE56521348FD8000021975 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		DCCE56531348FD8000021975 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DCCE56421348FD8000021975 /* Build configuration list for PBXProject "Ricochet Solver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DCCE564F1348FD8000021975 /* Debug */,
+				DCCE56501348FD8000021975 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DCCE56511348FD8000021975 /* Build configuration list for PBXNativeTarget "Ricochet Solver" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DCCE56521348FD8000021975 /* Debug */,
+				DCCE56531348FD8000021975 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = DCCE563F1348FD8000021975 /* Project object */;
+}
