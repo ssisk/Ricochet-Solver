@@ -8,13 +8,30 @@
 
 #include "board.h"
 
-
+/*
 Board::Board(short x, short y)
 {
     size.x = x;
     size.y = y;
     
     board = new BoardLocType[x * y];
+}
+ */
+
+Board::Board(short x, short y, Location target, BoardLocType brd[])
+{
+    size.x = x;
+    size.y = y;
+    
+    board = new BoardLocType[x * y];
+    
+    if(brd)
+    {
+        memcpy(board, brd, (sizeof(BoardLocType) * x * y));
+    }
+    
+    this->_target = target;
+    
 }
 
 Board::~Board()
@@ -23,14 +40,17 @@ Board::~Board()
 }
 
 
-void Board::print(BoardState state, ostream &fout, vector<Location> *moves)
+void Board::print(BoardState state, ostream &fout, vector<BoardOverlay> *overlays)
 {
-    char ROBOT_COLORS[NUM_ROBOTS][10] = {"red", "green", "orange"};
+    char ROBOT_COLORS[10][10] = {"red", "pink", "orange", "grey", "purple", "", "", "", "", "black"};
     
     time_t rawtime;
     time(&rawtime);
     
-    fout  << ctime(&rawtime) << "<table style=\"border: 3px solid #000\" width=400 height=400>\r\n";
+    int width = size.x * 80;
+    int height = size.y * 80;
+    
+    fout  << ctime(&rawtime) << "<table style=\"border: 3px solid #000\" width=" << width << " height=" << height << ">\r\n";
     
     char topChunk[100] = "border-top: 1px solid #000;";
     char leftChunk[100] = "border-left: 1px solid #000;";
@@ -71,6 +91,14 @@ void Board::print(BoardState state, ostream &fout, vector<Location> *moves)
                 case LEFT_BLOCKED | TOP_BLOCKED:
                     fout << leftChunk << topChunk;
                     break;
+                    
+                case LEFT_BLOCKED | RIGHT_BLOCKED:
+                    fout << leftChunk << rightChunk;
+                    break;
+                case TOP_BLOCKED | BOTTOM_BLOCKED:
+                    fout << topChunk << bottomChunk;
+                    break;
+                    
                 case EMPTY:
                     //do nothing!
                     break;
@@ -86,18 +114,19 @@ void Board::print(BoardState state, ostream &fout, vector<Location> *moves)
                 }
             }
             
-            if(moves)
+            if(overlays)
             {
-                for(int m = 0; m < moves->size(); m++)
+                for(int m = 0; m < overlays->size(); m++)
                 {
-                    if(moves->at(m).x == i && moves->at(m).y == j)
+                    if(overlays->at(m).loc.x == i && overlays->at(m).loc.y == j)
                     {
-                        fout << "m" << m;
+                        
+                        fout << "<font size=24 color=" << ROBOT_COLORS[overlays->at(m).robotColor] << ">" << overlays->at(m).text << "</font>";
                     }
                 }
             }
             
-            if(state.target.x == i && state.target.y == j)
+            if(_target.x == i && _target.y == j)
             {
                 fout << "<font size=24 color=red>O</font>";
             }
@@ -113,6 +142,7 @@ void Board::print(BoardState state, ostream &fout, vector<Location> *moves)
 }
 
 
+Location Location::Invalid = Location(INVALID_LOC, INVALID_LOC);
 
 
 /* This function is a helper function for WhereCanThisPieceMove
@@ -198,7 +228,7 @@ void Board::DetermineEdges(int curRobot, BoardState state, BoardLocType x, Board
 
 void Board::TestDetermineEdges()
 {
-    Board testBoard(5, 5);
+    Board testBoard(5, 5, Location());
     // define base state
     Location lowerEdge;
     Location upperEdge;
@@ -211,8 +241,6 @@ void Board::TestDetermineEdges()
     state.robots[1].y = 1;
     state.robots[2].x = 3;
     state.robots[2].y = 3;
-    state.target.x = INVALID_LOC;
-    state.target.x = INVALID_LOC;
     
     //no move case - piece above & right
     testBoard.DetermineEdges(0, state, 2, 3, lowerEdge, upperEdge);
@@ -437,6 +465,25 @@ void Board::WhereCanThisPieceMove(BoardState state, int curRobot, vector<Locatio
     }
 }
 
+void Board::PrintMoves(BoardState &state,vector<Location> &moves, ostream &out, int robotColor)
+{
+    vector<BoardOverlay> overlays;
+    
+    BoardOverlay newBO;
+    newBO.robotColor = robotColor;
+    for(int i = 0; i < moves.size(); i++)
+    {
+        newBO.loc = moves[i];
+        snprintf(newBO.text, 5, "m%i", i);
+        overlays.push_back(newBO);
+        
+    }
+    
+    print(state, out, &overlays);
+}
+
+
+
 void testLocationVector(vector<Location> &expected, vector<Location> &actual, ostream &out, Board& testBoard, BoardState &state, const char* testName)
 {
     
@@ -473,9 +520,9 @@ void testLocationVector(vector<Location> &expected, vector<Location> &actual, os
     {
         out << "<tr><td>Expected</td><td>Actual</td></tr>";
         out << "<tr><td>";
-        testBoard.print(state, out, &expected);
+        testBoard.PrintMoves(state, expected, out, PRINTBOARD_NOCOLOR);
         out << "</td><td>";
-        testBoard.print(state, out, &actual);
+        testBoard.PrintMoves(state, actual, out, PRINTBOARD_NOCOLOR);
         out << "</td></tr>";
     }
     out << "</table>";
@@ -483,7 +530,7 @@ void testLocationVector(vector<Location> &expected, vector<Location> &actual, os
 
 void Board::TestGet(ostream &out)
 {
-    Board testBoard(2, 2);
+    
     
     // define base state
     BoardLocType brd[4] =
@@ -492,14 +539,14 @@ void Board::TestGet(ostream &out)
         LEFT_BLOCKED | BOTTOM_BLOCKED, RIGHT_BLOCKED | BOTTOM_BLOCKED
     };
     
-    memcpy(testBoard.board, brd, sizeof(brd));
+    Board testBoard(2, 2, Location(), brd);
     
     assert(testBoard.get(0, 0) == (LEFT_BLOCKED | TOP_BLOCKED));
     assert(testBoard.get(0, 1) == (LEFT_BLOCKED | BOTTOM_BLOCKED));
     assert(testBoard.get(1, 0) == (TOP_BLOCKED | RIGHT_BLOCKED));
     assert(testBoard.get(1, 1) == (RIGHT_BLOCKED | BOTTOM_BLOCKED));
     
-    Board testBoard2(5, 5);
+    Board testBoard2(5, 5, Location());
     
     // define base state
     BoardLocType brd2[25] =
@@ -522,7 +569,7 @@ void Board::TestGet(ostream &out)
 void Board::TestWhereCanThisPieceMove(ostream &out)
 {
     
-    Board testBoard(5, 5);
+    
     
     // define base state
     BoardLocType brd[25] =
@@ -534,7 +581,9 @@ void Board::TestWhereCanThisPieceMove(ostream &out)
          BOTTOM_BLOCKED | LEFT_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED | RIGHT_BLOCKED
     };
     
-    memcpy(testBoard.board, brd, sizeof(brd));
+    Board testBoard(5, 5, Location(), brd);
+    
+    
     
     Location lowerEdge;
     Location upperEdge;
@@ -547,8 +596,7 @@ void Board::TestWhereCanThisPieceMove(ostream &out)
     state.robots[1].y = 1;
     state.robots[2].x = 3;
     state.robots[2].y = 3;
-    state.target.x = INVALID_LOC;
-    state.target.x = INVALID_LOC;
+
     
     
     vector<Location> ret;
@@ -599,7 +647,6 @@ void Board::TestWhereCanThisPieceMove(ostream &out)
     ret.clear();
     
     //walls all around
-    Board testBoardAllWallsAround(5, 5);
     BoardLocType brdAllWallsAround[25] =
     {
         LEFT_BLOCKED | TOP_BLOCKED, TOP_BLOCKED, TOP_BLOCKED, TOP_BLOCKED, TOP_BLOCKED | RIGHT_BLOCKED,
@@ -608,9 +655,13 @@ void Board::TestWhereCanThisPieceMove(ostream &out)
         LEFT_BLOCKED, EMPTY, TOP_BLOCKED, EMPTY, RIGHT_BLOCKED,
         BOTTOM_BLOCKED | LEFT_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED | RIGHT_BLOCKED
     };
-    memcpy(testBoard.board, brdAllWallsAround, sizeof(brdAllWallsAround));
+    Board testBoardAllWallsAround(5, 5, Location(), brdAllWallsAround);
     state.robots[0].x = 2;
     state.robots[0].y = 2;
+    state.robots[1].x = 0;
+    state.robots[1].y = 0;
+    state.robots[2].x = 4;
+    state.robots[2].y = 4;
     testBoardAllWallsAround.WhereCanThisPieceMove(state, 0, ret);
     // the piece can't move anywhere
     testLocationVector(expected, ret, out, testBoardAllWallsAround, state, "walls all around");
@@ -618,7 +669,7 @@ void Board::TestWhereCanThisPieceMove(ostream &out)
     ret.clear();
     
     //robots all around (part 1 - left/right)
-    Board testBoardAllRobotsAround(5, 5);
+    
     BoardLocType brdAllRobotsAround[25] =
     {
         LEFT_BLOCKED | TOP_BLOCKED, TOP_BLOCKED, TOP_BLOCKED, TOP_BLOCKED, TOP_BLOCKED | RIGHT_BLOCKED,
@@ -627,7 +678,7 @@ void Board::TestWhereCanThisPieceMove(ostream &out)
         LEFT_BLOCKED, EMPTY, EMPTY, EMPTY, RIGHT_BLOCKED,
         BOTTOM_BLOCKED | LEFT_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED | RIGHT_BLOCKED
     };
-    memcpy(testBoard.board, brdAllRobotsAround, sizeof(brdAllRobotsAround));
+    Board testBoardAllRobotsAround(5, 5, Location(), brdAllRobotsAround);
     state.robots[0].x = 2;
     state.robots[0].y = 1;
     state.robots[1].x = 3;
@@ -671,13 +722,6 @@ void Board::TestPrintBoard(ostream &out)
     state.robots[1].y = 3;
     state.robots[2].x = 2;
     state.robots[2].y = 1;
-    state.target.x = 4;
-    state.target.y = 3;
-    
-    
-    Board testBoard(5, 5);
-    
-    
     
     BoardLocType brd[25] = 
     {
@@ -688,7 +732,7 @@ void Board::TestPrintBoard(ostream &out)
          BOTTOM_BLOCKED | LEFT_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED | RIGHT_BLOCKED
     };
     
-    memcpy(testBoard.board, brd, sizeof(brd));
+    Board testBoard(5, 5, Location(4, 3), brd);
     
 
     
@@ -696,4 +740,15 @@ void Board::TestPrintBoard(ostream &out)
     
     out << "end Test Print board<br><br><br>";
     
+}
+
+std::size_t hash_value(BoardState const& b)
+{
+    size_t seed = 0;
+    for(int i = 0; i < NUM_ROBOTS; i++)
+    {
+        boost::hash_combine(seed, b.robots[i].x);
+        boost::hash_combine(seed, b.robots[i].y);
+    }
+    return seed;
 }

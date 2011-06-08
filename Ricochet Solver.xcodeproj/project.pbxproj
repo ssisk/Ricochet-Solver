@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DC1A14E613799830009E30A1 /* Solver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DC1A14E413799830009E30A1 /* Solver.cpp */; };
 		DCBEA137135A4BB4009BA547 /* board.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DCBEA135135A4BB4009BA547 /* board.cpp */; };
 		DCCE564D1348FD8000021975 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DCCE564C1348FD8000021975 /* main.cpp */; };
 		DCCE5656134963E500021975 /* old.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DCCE5654134963E500021975 /* old.cpp */; };
@@ -25,6 +26,10 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		DC1A14E413799830009E30A1 /* Solver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Solver.cpp; sourceTree = "<group>"; };
+		DC1A14E513799830009E30A1 /* Solver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Solver.h; sourceTree = "<group>"; };
+		DC1A14E9139BEECA009E30A1 /* hash.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = hash.hpp; path = ../../../../../../usr/local/boost_1_46_1/boost/functional/hash.hpp; sourceTree = "<group>"; };
+		DC1A14EA139BEED5009E30A1 /* boost */ = {isa = PBXFileReference; lastKnownFileType = folder; name = boost; path = ../../../../../../usr/local/boost_1_46_1/boost; sourceTree = "<group>"; };
 		DCBEA135135A4BB4009BA547 /* board.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = board.cpp; sourceTree = "<group>"; };
 		DCBEA136135A4BB4009BA547 /* board.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = board.h; sourceTree = "<group>"; };
 		DCCE56481348FD8000021975 /* Ricochet Solver */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Ricochet Solver"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -45,6 +50,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		DC1A14E8139BEE7F009E30A1 /* Indexing headers */ = {
+			isa = PBXGroup;
+			children = (
+				DC1A14EA139BEED5009E30A1 /* boost */,
+				DC1A14E9139BEECA009E30A1 /* hash.hpp */,
+			);
+			name = "Indexing headers";
+			sourceTree = "<group>";
+		};
 		DCCE563D1348FD8000021975 = {
 			isa = PBXGroup;
 			children = (
@@ -69,7 +83,10 @@
 				DCCE5655134963E500021975 /* old.h */,
 				DCCE564E1348FD8000021975 /* Ricochet_Solver.1 */,
 				DCBEA135135A4BB4009BA547 /* board.cpp */,
+				DC1A14E413799830009E30A1 /* Solver.cpp */,
+				DC1A14E513799830009E30A1 /* Solver.h */,
 				DCBEA136135A4BB4009BA547 /* board.h */,
+				DC1A14E8139BEE7F009E30A1 /* Indexing headers */,
 			);
 			path = "Ricochet Solver";
 			sourceTree = "<group>";
@@ -124,6 +141,7 @@
 				DCCE564D1348FD8000021975 /* main.cpp in Sources */,
 				DCCE5656134963E500021975 /* old.cpp in Sources */,
 				DCBEA137135A4BB4009BA547 /* board.cpp in Sources */,
+				DC1A14E613799830009E30A1 /* Solver.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -142,9 +160,11 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /usr/local/boost_1_46_1;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = /usr/local/boost_1_46_1;
 			};
 			name = Debug;
 		};
@@ -157,8 +177,10 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /usr/local/boost_1_46_1;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = /usr/local/boost_1_46_1;
 			};
 			name = Release;
 		};
