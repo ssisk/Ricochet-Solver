@@ -11,7 +11,7 @@
 #include <stack>
 #include <boost/functional/hash.hpp>
 
-#define ALG_DEBUG
+#define ALG_DEBUG 1
 
 void PrintBoardCounts(BoardState &state, ostream & out, int curRobot, long visitCounts[20][20][NUM_ROBOTS], Board *board)
 {
@@ -53,7 +53,7 @@ public:
     
     void PrintCounts(BoardState &startingState, int winningRobot, ostream &out, Board *board)
     {
-        out << "<table><tr><td>Piece Visits</td><td>Delta in Piece Visits</td></tr><tr><td>";
+ /*       out << "<table><tr><td>Piece Visits</td><td>Delta in Piece Visits</td></tr><tr><td>";
         
         //print out the board counts
         PrintBoardCounts(startingState, out, winningRobot, _visitCounts, board);
@@ -63,7 +63,8 @@ public:
         PrintBoardCounts(startingState, out, winningRobot, _visitCountsChange, board);
         
         out << "</td></tr></table>";
-        
+        */
+   /*
         for(int x = 0; x < board->GetSize().x; x++)
         {
             for(int y = 0; y < board->GetSize().y; y++)
@@ -74,6 +75,7 @@ public:
                 }
             }
         }
+    */
     }
     
     void IncrementCounts(int x, int y, int r)
@@ -685,7 +687,7 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
     assert(20 > boardSize.y);
     
     AllPastStatesInvestigatedFilter statesFilter;
-    DebugSuggestedMoves debugSuggestedMoves;
+    //DebugSuggestedMoves debugSuggestedMoves;
     
     while (stateToInvestigate.size() > 0)
     {
@@ -700,7 +702,7 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
             visitCounts.PrintCounts(startingState, winningRobot, out, board);
         }
 
-        cout <<"iterating. stateToInvestigate: " << stateToInvestigate.size() << ", history: " << history.size() << ", hash table: " <<  statesFilter.size() << "\r\n";
+       // cout <<"iterating. stateToInvestigate: " << stateToInvestigate.size() << ", history: " << history.size() << ", hash table: " <<  statesFilter.size() << "\r\n";
         //get the current board state
         currentState = stateToInvestigate.back();
         stateToInvestigate.pop_back();
@@ -708,7 +710,7 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
         //are we at the "clear history" item?
         while(currentState.robots[0] == Location::Invalid)
         {
-            cout << "popping history\r\n";
+            //cout << "popping history\r\n";
             assert(history.size() > 0);
             history.pop_back();
             if(stateToInvestigate.size() <= 0)
@@ -725,16 +727,16 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
         //also, push a marker in the investigate stack so that we remember to pop the history list when we hit this again. 
         stateToInvestigate.push_back(PopHistory);
         
-        out << "<table><tr>";
+       // out << "<table><tr>";
         
         //for each piece on the board...
         for(int r = 0; r < NUM_ROBOTS; r++) 
         {       
-            debugSuggestedMoves.Clear();
+            //debugSuggestedMoves.Clear();
             possibleMoves.clear();
             //get the possible moves
             board->WhereCanThisPieceMove(currentState, r, possibleMoves);
-            debugSuggestedMoves.AddPossibleMoves(possibleMoves);
+            //debugSuggestedMoves.AddPossibleMoves(possibleMoves);
             
             //cout << "possible moves: " << possibleMoves.size() << "\r\n";
             //for each of the possible moves...
@@ -755,10 +757,10 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
                         allSolutions.push_back(history);
                         history.pop_back();
                         cout << "found a solution\r\n";
-                        cout << "setting new max depth " << history.size() << " without -1\r\n";
+                        cout << "setting new max depth with -1: " << history.size() << "\r\n";
                         if(maxDepth >= history.size())
                         {
-                            maxDepth = (int) history.size(); // I do it -1 since I want to solve for a shorter solution than the current
+                            maxDepth = (int) history.size() - 1; // I do it -1 since I want to solve for a shorter solution than the current
                         }
                         
                         visitCounts.IncrementCounts(possibleMoves[m].x, possibleMoves[m].y, r);
@@ -773,13 +775,13 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
                 {  
                     //when we are max depth we don't add a move to the investigate list
                     //cout << "at max depth\r\n";
-                    debugSuggestedMoves.RemoveMove(possibleMoves[m]);
+                    //debugSuggestedMoves.RemoveMove(possibleMoves[m]);
                     continue;
                 }
                 else
                 {
                     //is the move already in state to investigate?
-                    if(statesFilter.AllowState(newState))
+                    if(statesFilter.AllowState(newState, history.size()))
                     {
                         //cout << "pushing state\r\n";
                         stateToInvestigate.push_back(newState);
@@ -789,15 +791,15 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
                     }
                     else
                     {
-                        debugSuggestedMoves.RemoveMove(possibleMoves[m]);
+                        //debugSuggestedMoves.RemoveMove(possibleMoves[m]);
                     }
                 }
                 
                 
             } 
-           debugSuggestedMoves.Print(out, this, currentState, r); 
+           //debugSuggestedMoves.Print(out, this, currentState, r); 
         } //end of robot loop
-        out << "</tr></table>";
+       // out << "</tr></table>";
         
         
         
@@ -806,7 +808,7 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
 }
 
 
-
+/*
 //depth first search impl
 //returns the set of solutions found in allSolutions
 
@@ -961,7 +963,7 @@ void RicochetSolver::SolveDepthFirst_BlackMovesFirst(int maxDepth, BoardState st
     }
     
 }
-
+*/
 
 void printBoardStates(Board &board, vector<BoardState> &states, ostream &out)
 {
@@ -1049,7 +1051,7 @@ void RicochetSolver::TestSolveDepthFirst(ostream &out)
     startingStateMedium.robots[4] = Location(1, 1);
     RicochetSolver solverMedium(boardMedium);
 
-    //solverMedium.SolveDepthFirst_withHashedHistory(13, startingStateMedium, 0, allSolutions, out);
+    solverMedium.SolveDepthFirst_withHashedHistory(20, startingStateMedium, 0, allSolutions, out);
     
     out << "<h1>Depth First Solver - Medium</h1>";
     out << "# of solutions: " << allSolutions.size() << "<br>";

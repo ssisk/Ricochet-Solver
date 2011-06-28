@@ -7,7 +7,7 @@
 //
 
 #include "board.h"
-#include <boost/unordered_set.hpp>
+#include <boost/unordered_map.hpp>
 
 class RicochetSolver
 {
@@ -46,24 +46,21 @@ private:
             //nothing for now...
         }
         
-        //checks to see if the state is in the history, and if it is, returns 
-        bool AllowState(BoardState &potentialMove)
+        //checks to see whether or not a given boardstate has already been looked at and whether or not the boardstate was arrived at from a shorter distance. Also updates the distance to that boardstate if the new distance is shorter.
+        //returns: false if the boardstate has already been visited at a shorter distance. true if the boardstate has not been visited or if it was visited at a larger distance.
+        
+        bool AllowState(BoardState &potentialMove, short currentDepth)
         {
             bool ret = false;
             
-            boost::unordered_set<BoardState>::iterator itr= _tableBoardState.find(potentialMove);
+            boost::unordered_map<BoardState, short>::iterator itr= _mapBoardStateToShort.find(potentialMove);
             
-            
-            
-            if(itr == _tableBoardState.end())
+            if(itr == _mapBoardStateToShort.end() || itr->second > currentDepth)
             {
                 ret = true;
-                _tableBoardState.insert(potentialMove);
+                _mapBoardStateToShort[potentialMove] = currentDepth;
             }
-            else
-            {
-                assert(*itr == potentialMove);
-            }
+            
             
             return ret;
             
@@ -71,11 +68,13 @@ private:
         
         size_t size()
         {
-            return _tableBoardState.bucket_count();
+            return _mapBoardStateToShort.bucket_count();
+           
         }
         
     private:
-        boost::unordered_set<BoardState> _tableBoardState;
+                     
+        boost::unordered_map<BoardState, short> _mapBoardStateToShort;
     };
     
     class DebugSuggestedMoves
