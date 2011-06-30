@@ -5,19 +5,24 @@
 //  Created by Stephen Sisk on 4/16/11.
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
+//  The Board class is responsible for maintaining the state of the board 
+//  and determining where a piece can move (ie, collision detection between a 
+//  piece and the wall, piece and another piece)
 
 #include "board.h"
 
-/*
-Board::Board(short x, short y)
-{
-    size.x = x;
-    size.y = y;
-    
-    board = new BoardLocType[x * y];
-}
- */
+// x and y are dimensions of the board
+// target is the location of the victory location (ie, where the correct 
+//      color robot has to move in order for the player to win)
+// brd is the board you'd like to solve. it's a one dimensional array used
+//      to store a two dimensional board, so the board is stored in the following
+//      format:
 
+//      0 1 2
+//      3 4 5
+//      6 7 8
+//
+//      (assuming a 3x3 board)
 Board::Board(short x, short y, Location target, BoardLocType brd[])
 {
     size.x = x;
@@ -25,11 +30,10 @@ Board::Board(short x, short y, Location target, BoardLocType brd[])
     
     board = new BoardLocType[x * y];
     
-    if(brd)
-    {
-        memcpy(board, brd, (sizeof(BoardLocType) * x * y));
-    }
-    
+    assert(brd); // umm.... we need a board! Don't bother checking for this, 
+                    //if the caller didn't pass a brd, it's a serious problem and we should crash
+    memcpy(board, brd, (sizeof(BoardLocType) * x * y));
+
     this->_target = target;
     
 }
@@ -39,7 +43,13 @@ Board::~Board()
     delete[] board;
 }
 
-
+// main function for printing an HTML version of the current board state. 
+// state determines where the pieces are
+// fout is where the board will be printed
+// overlays lets you print other pieces on the board - see the BoardOverlay struct
+//      for more details
+//
+// robots are Xes, the target is an O
 void Board::print(BoardState state, ostream &fout, vector<BoardOverlay> *overlays)
 {
     char ROBOT_COLORS[10][10] = {"red", "pink", "orange", "grey", "purple", "", "", "", "", "black"};
@@ -52,6 +62,7 @@ void Board::print(BoardState state, ostream &fout, vector<BoardOverlay> *overlay
     
     fout  << ctime(&rawtime) << "<table style=\"border: 3px solid #000\" width=" << width << " height=" << height << ">\r\n";
     
+    // the css to get inserted into the style for the given table cell. We use the border of the table to show where the walls in the maze are
     char topChunk[100] = "border-top: 1px solid #000;";
     char leftChunk[100] = "border-left: 1px solid #000;";
     char bottomChunk[100] = "border-bottom: 1px solid #000;";
@@ -200,6 +211,7 @@ void Board::DetermineEdges(int curRobot, BoardState state, BoardLocType x, Board
             }
         }
         
+        //rinse and repeat for x movement. should always match the y movement
         if(state.robots[r].x == x)
         {
             BoardLocType robY = state.robots[r].y;
@@ -228,7 +240,8 @@ void Board::DetermineEdges(int curRobot, BoardState state, BoardLocType x, Board
 
 void Board::TestDetermineEdges()
 {
-    Board testBoard(5, 5, Location());
+    BoardLocType brd[25]; 
+    Board testBoard(5, 5, Location(), brd);
     // define base state
     Location lowerEdge;
     Location upperEdge;
@@ -302,7 +315,11 @@ void Board::TestDetermineEdges()
 }
 
 
-// given a robot on the board, where can it move? Returns a set of x/y coordinates indicating where it can move. 
+// given a robot on the board, what are valid moves? 
+// 
+// state - current board state, indicating location of the other robots
+// curRobot - the robot to move
+// ret - returns a set of x/y coordinates indicating where curRobt can move. Ret should be empty when this function is called
 void Board::WhereCanThisPieceMove(BoardState state, int curRobot, vector<Location> &ret)
 {
     assert(ret.size() == 0);
@@ -465,7 +482,11 @@ void Board::WhereCanThisPieceMove(BoardState state, int curRobot, vector<Locatio
     }
 }
 
-void Board::PrintMoves(BoardState &state,vector<Location> &moves, ostream &out, int robotColor)
+// given a current boardstate and set of potential moves, print out where a piece can move
+// state - current state of the board
+// moves - the locations that are available to move onto
+// robotColor - color to use when printing. It is suggested that all of the moves be for the robot indicated by the index of robotColor
+void Board::PrintMoves(BoardState &state, vector<Location> &moves, ostream &out, int robotColor)
 {
     vector<BoardOverlay> overlays;
     
@@ -482,8 +503,15 @@ void Board::PrintMoves(BoardState &state,vector<Location> &moves, ostream &out, 
     print(state, out, &overlays);
 }
 
-
-
+// prints out the result of the unit tests for WhereCanThisPieceMove in HTML format
+//
+// expected - the correct set of moves for the piece
+// actual - what was returned by the function
+// out - where to print the HTML
+// testBoard & state - the board and current state of the board
+// testName - a user friendly name to be printed, describing the test
+//
+// The output will be a table consisiting of two columns showing expected and actual results
 void testLocationVector(vector<Location> &expected, vector<Location> &actual, ostream &out, Board& testBoard, BoardState &state, const char* testName)
 {
     
@@ -528,6 +556,7 @@ void testLocationVector(vector<Location> &expected, vector<Location> &actual, os
     out << "</table>";
 }
 
+// test the board::get function
 void Board::TestGet(ostream &out)
 {
     
@@ -546,7 +575,7 @@ void Board::TestGet(ostream &out)
     assert(testBoard.get(1, 0) == (TOP_BLOCKED | RIGHT_BLOCKED));
     assert(testBoard.get(1, 1) == (RIGHT_BLOCKED | BOTTOM_BLOCKED));
     
-    Board testBoard2(5, 5, Location());
+    
     
     // define base state
     BoardLocType brd2[25] =
@@ -558,7 +587,7 @@ void Board::TestGet(ostream &out)
         BOTTOM_BLOCKED | LEFT_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED, BOTTOM_BLOCKED | RIGHT_BLOCKED
     };
     
-    memcpy(testBoard2.board, brd2, sizeof(brd2));
+    Board testBoard2(5, 5, Location(), brd2);
     
     assert(testBoard2.get(0, 0) == (LEFT_BLOCKED | TOP_BLOCKED));
     assert(testBoard2.get(2, 1) == (LEFT_BLOCKED | BOTTOM_BLOCKED));
@@ -566,6 +595,8 @@ void Board::TestGet(ostream &out)
     assert(testBoard2.get(0, 4) == (BOTTOM_BLOCKED | LEFT_BLOCKED));
 }
 
+// test the WhereCanThisPieceMove function. Note that it does not assert, but rather
+// outputs the results to out for user inspection. 
 void Board::TestWhereCanThisPieceMove(ostream &out)
 {
     
@@ -709,7 +740,7 @@ void Board::TestWhereCanThisPieceMove(ostream &out)
     
 }
 
-
+// tests the Board::print function
 void Board::TestPrintBoard(ostream &out)
 {
     out << "Test Print board<br>";
@@ -742,6 +773,7 @@ void Board::TestPrintBoard(ostream &out)
     
 }
 
+// produces a hash for the boost library's hashing functions. Allows boardstates to be used as keys in a hashtable. 
 std::size_t hash_value(BoardState const& b)
 {
     size_t seed = 0;

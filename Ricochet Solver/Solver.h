@@ -13,12 +13,7 @@ class RicochetSolver
 {
 public:
     RicochetSolver(Board &board);
-    void SolveDepthFirst(int maxDepth, BoardState startingState, int winningRobot, vector<vector<BoardState> > &allSolutions, ostream &out);
 
-    void SolveDepthFirst_BlackMovesFirst(int maxDepth, BoardState startingState, int winningRobot, vector<vector<BoardState> > &allSolutions, ostream &out);
-    
-    void SolveDepthFirst_FavorFewerPieceCounts(int maxDepth, BoardState startingState, int winningRobot, vector<vector<BoardState> > &allSolutions, ostream &out);
-    
     void SolveDepthFirst_withHashedHistory(int maxDepth, BoardState startingState, int winningRobot, vector<vector<BoardState> > &allSolutions, ostream &out);
     
     static void TestAllPastStatesInvestigatedFilter(ostream &out);
@@ -34,6 +29,8 @@ private:
     };
     void PrintMoveCosts(vector<RicochetSolver::MoveCost> &MoveCosts, BoardState &state, ostream &out, int curRobot);
     void PrintMoves(vector<Location> &Moves, BoardState &state, ostream & out, int curRobot);
+    
+    void UpdateMoveInStack(vector<MoveCost> &stackToCheck, Location possibleMove, bool &moveFound, int curCost);
     void ColorBoardForThisPiece(BoardState startingState, int curRobot, vector<MoveCost> &ret);
     
     class AllPastStatesInvestigatedFilter
@@ -77,13 +74,24 @@ private:
         boost::unordered_map<BoardState, short> _mapBoardStateToShort;
     };
     
+    // The purpose of this class is to help debug the process whereby the search algorithm takes a set of potential moves and whittles it down to a set of moves it's actually going to do. So it allows you to add a set of moves the algorithm is considering (AddPossibleMoves), then slowly remove them as the algorithm decides not to use them(RemoveMove) and finally output the result to the screen (Print)
+    
+    // Using this class will slow down the solve process considerably, so it's suggested that it only be used for debugging small boards. In that scenario, it can be highly useful.
+    
     class DebugSuggestedMoves
     {
     public:
+        // call these functions at the beginning and end of investigating a given boardstate - doing so will ensure that the items for the boardstate all go into one line. 
+        // This functionality is currently brittle - I would probably have the class write into a private buffer and output to fout once at EndBoardState() in the future. 
+        void StartBoardState(ostream &out); 
+        void EndBoardState(ostream &out);
+        
         void Print(ostream &out, RicochetSolver *solver, BoardState startingState, int color);
         void AddPossibleMoves(vector<Location> &possibleMoves);
         void RemoveMove(Location &move);
         void Clear();
+        
+
         
     private:
         vector<Location> _possibleMoves;

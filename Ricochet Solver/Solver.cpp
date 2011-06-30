@@ -5,14 +5,19 @@
 //  Created by Stephen Sisk on 5/10/11.
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
+// solver is responsible for the algorithm of how we try and solve the board
+//
+// One of the trickier problems when working with this algorithm was figuring out how to debug it. To that end, there's a fair bit of code in this file devoted to getting some visibility in how the algorithm works.
 
 #include "Solver.h"
-
 #include <stack>
 #include <boost/functional/hash.hpp>
 
-#define ALG_DEBUG 1
+// setting this flag makes the program *much* slower, but outputs a lot of useful debug information
+//#define ALG_DEBUG_VISIT_COUNTS
+//#define ALG_DEBUG_SUGGESTED_MOVES
 
+// print out how many times we've visited a given location on the board
 void PrintBoardCounts(BoardState &state, ostream & out, int curRobot, long visitCounts[20][20][NUM_ROBOTS], Board *board)
 {
     vector<BoardOverlay> overlays;
@@ -39,6 +44,11 @@ void PrintBoardCounts(BoardState &state, ostream & out, int curRobot, long visit
     board->print(state, out, &overlays);
 }
 
+// this class makes it possible to count how many times a given location on the board has been visited by a given piece
+
+// This class is useful if you're having trouble figuring out whether or not the algorithm is getting pieces to move into a given area or not, and what the trends are in what part of the board different pieces are exploring, and what piece is moving a lot.
+
+// One improvement I thought about is converting the output into a heat map since it'd be easier to read
 class VisitCounter
 {
 public:
@@ -51,9 +61,11 @@ public:
         
     }
     
+    // it is suggested that you only call this PrintCounts function occasionally (on the order of every 10k iterations or so
     void PrintCounts(BoardState &startingState, int winningRobot, ostream &out, Board *board)
     {
- /*       out << "<table><tr><td>Piece Visits</td><td>Delta in Piece Visits</td></tr><tr><td>";
+#ifdef ALG_DEBUG_VISIT_COUNTS
+        out << "<table><tr><td>Piece Visits</td><td>Delta in Piece Visits</td></tr><tr><td>";
         
         //print out the board counts
         PrintBoardCounts(startingState, out, winningRobot, _visitCounts, board);
@@ -63,8 +75,8 @@ public:
         PrintBoardCounts(startingState, out, winningRobot, _visitCountsChange, board);
         
         out << "</td></tr></table>";
-        */
-   /*
+        
+   
         for(int x = 0; x < board->GetSize().x; x++)
         {
             for(int y = 0; y < board->GetSize().y; y++)
@@ -75,9 +87,12 @@ public:
                 }
             }
         }
-    */
+#endif
     }
     
+    // increment the counts
+    // x, y - the location of the robot
+    // r - the index of the robot that's visiting that location
     void IncrementCounts(int x, int y, int r)
     {
         _visitCounts[x][y][r]++;
@@ -97,11 +112,36 @@ RicochetSolver::RicochetSolver(Board &board)
 
 
 
+// check to see if possibleMove exists in stackToCheck and updates the cost if curCost is less that stackToCheck's cost
+//
+// stackToCheck - the stack to check and update
+// possibleMove - the location that's being checked
+// moveFound - returns whether or not the move was found in stackToCheck
+// curCosts
+void RicochetSolver::UpdateMoveInStack(vector<MoveCost> &stackToCheck, Location possibleMove, bool &moveFound, int curCost)
+{
+    // OPPORTUNITY FOR OPTIMIZATION - finding the right location quickly here
+    for(int j = 0; j < stackToCheck.size(); j++)
+    {
+        if(possibleMove == stackToCheck[j].loc)
+        {
+            moveFound = true;
+            if(stackToCheck[j].cost > curCost)
+            {
+                stackToCheck[j].cost = curCost;
+            }
+        }
+    }
+}
 
 /*
- given a set of state, determines everywhere a given piece could move
+ given a set of state, determines everywhere a given piece could move without moving other pieces. This was a test function written to investigate whether or not I really liked how the Board class was set up before I started working on the Solve functions, and it's not used to help solve the board at all. 
  
  returns: a vector of MoveCosts representing the potential boardstates and their cost (cost = number of moves to get there)
+ 
+ startingState - the location of all the pieces on the board
+ curRobot - the robot which will move on the board
+ closedMoves - returns all the locations on the board that the robot visited
  */
 void RicochetSolver::ColorBoardForThisPiece(BoardState startingState, int curRobot, vector<MoveCost> &closedMoves)
 {
@@ -109,19 +149,16 @@ void RicochetSolver::ColorBoardForThisPiece(BoardState startingState, int curRob
     closedMoves.clear();
     
     //DATA STRUCTURE THOUGHTS
-    //closed stack = places that we've already looked at (ie, we've added their items to open stack)
-    //open stack = places we haven't looked at yet (they may have moves available from them that
+    //closed stack = places that we've already looked at (ie, we've added all potential moves to the open stack)
+    //open stack = places we haven't looked at yet (they may have moves available from them that aren't in the open or closed statck yet)
     
     //both open and closed stack have up to date costs for them
-    //an opportunity for efficiency is storing both data structures by the location 
     
     vector<MoveCost> openMoves;   
 
-    //this hold the possible moves from a given location - as we move the robot around the board, this will hold the result from WhereCanThisPieceMove, telling us where the robot can go next. 
+    //this hold the possible moves from a given location - as we move the robot around the board, this will hold the result from WhereCanThisPieceMove, telling us where the robot can go next. It's used temporarily, until the moves are taken from it and put into the open Moves stack, or discarded b/c they're already in the open or closed stacks
     vector<Location> possibleMoves;
     
-    
-    //ALGORITHM
     
     //push the current position on the open stack
     Location robStartingLoc = startingState.robots[curRobot];
@@ -137,13 +174,13 @@ void RicochetSolver::ColorBoardForThisPiece(BoardState startingState, int curRob
     while(openMoves.size() > 0)
     {
         cout << "open moves size: " << openMoves.size() << "\r\n";
-        //we'll be reusing the startingState struct, so just making sure we move the current robot around every time. The rest of the state will remain the same as we check where this robot can move to.
+        //we'll be reusing the startingState struct, so we're clearing it just to make sure we move the current robot around every time. The rest of the state will remain the same as we check where this robot can move to.
         startingState.robots[curRobot].x = INVALID_LOC;
         startingState.robots[curRobot].y = INVALID_LOC;
         
         //pull a position off of the open stack
         curMove = openMoves.back();
-        openMoves.pop_back(); //I find it lame that pop doesn't return a value
+        openMoves.pop_back(); //I find it lame that pop_back doesn't return the value it's popping
         
         //calculate the cost of all the moves that we'll be taking
         curCost = curMove.cost + 1;
@@ -151,42 +188,22 @@ void RicochetSolver::ColorBoardForThisPiece(BoardState startingState, int curRob
         cout << "current position: " << (int) curMove.loc.x << ", " << (int) curMove.loc.y << "\r\n";
         
         //WhereCanThisPieceMove for that position. 
-        
         startingState.robots[curRobot] = curMove.loc;
         board->WhereCanThisPieceMove(startingState, curRobot, possibleMoves);
         
-        
-        
         //look for the possibleMoves in the open stack. if a move isn't in the open stack, push it onto the open stack. If one of the moves is in the open stack, compare cost and update it. 
+        // also checks to see if the moves are in the closed stack as well
         for (int i = 0; i < possibleMoves.size(); i++ )
         {
             cout << "possible move " << i << ": " << (int) possibleMoves[i].x << ", " << (int) possibleMoves[i].y << " ";
             bool moveFound = false;
-            // OPPORTUNITY FOR OPTIMIZATION - finding the right location quickly here
-            for(int j = 0; j < openMoves.size(); j++)
-            {
-                if(possibleMoves[i] == openMoves[j].loc)
-                {
-                    moveFound = true;
-                    cout << "move found in open\r\n";
-                    if(openMoves[j].cost > curCost)
-                    {
-                        openMoves[j].cost = curCost;
-                    }
-                }
-            }
             
-            for(int j = 0; j < closedMoves.size(); j++)
+            
+            UpdateMoveInStack(openMoves, possibleMoves[i], moveFound, curCost);
+            
+            if(!moveFound)
             {
-                if(possibleMoves[i] == closedMoves[j].loc)
-                {
-                    moveFound = true;
-                    cout << "moveFound in closed\r\n";
-                    if(closedMoves[j].cost > curCost)
-                    {
-                        closedMoves[j].cost = curCost;
-                    }
-                }
+                UpdateMoveInStack(closedMoves, possibleMoves[i], moveFound, curCost);
             }
             
             if(!moveFound)
@@ -207,6 +224,7 @@ void RicochetSolver::ColorBoardForThisPiece(BoardState startingState, int curRob
     //at this point, closedMoves contains the proper return values
 }
 
+//given a set of moveCosts, prints them out in a user friendly way
 void RicochetSolver::PrintMoveCosts(vector<MoveCost> &MoveCosts, BoardState &state, ostream & out, int curRobot)
 {
     vector<BoardOverlay> overlays;
@@ -223,10 +241,7 @@ void RicochetSolver::PrintMoveCosts(vector<MoveCost> &MoveCosts, BoardState &sta
 }
 
 
-
-
-
-
+// unit test for ColorBoardForThisPiece. Does not assert, simply outputs HTML
 void RicochetSolver::TestColorBoardForThisPiece(ostream &out)
 {
     out << "<h2>Test ColorBoardForThisPiece</h2>";
@@ -269,413 +284,102 @@ void RicochetSolver::TestColorBoardForThisPiece(ostream &out)
     ret.clear();
 }
 
-//depth first search impl
-//returns the set of solutions found in allSolutions
-
-//flaw with this solution: it will often traverse the same solution space multiple times. it does not scale to larger sizes
-void RicochetSolver::SolveDepthFirst(int maxDepth, BoardState startingState, int winningRobot, vector<vector<BoardState> > &allSolutions, ostream &out
-                                     )
-{
-    cout << "start\r\n";
-    assert(allSolutions.size() == 0);
-    allSolutions.clear();
-
-    vector<BoardState> stateToInvestigate;
-    vector<BoardState> history;
-    
-    vector<Location> possibleMoves;
-    BoardState currentState;
-    BoardState newState;
-    
-    BoardState PopHistory;
-    PopHistory.robots[0] = Location::Invalid;
-    
-    //our starting state is the first thing we investigate!
-    stateToInvestigate.push_back(startingState);
-    
-    int iterationCount = 0; 
-    VisitCounter visitCounts;
-    Location boardSize = board->GetSize();
-    assert(20 > boardSize.x);
-    assert(20 > boardSize.y);
-    while (stateToInvestigate.size() > 0)
-    {
-        iterationCount++;
-        
-        if(iterationCount >= 10000)
-        {
-            cout << "10k iterations\r\n";
-            iterationCount = 0;
-            
-            visitCounts.PrintCounts(startingState, winningRobot, out, board);            
-            
-        }
-        
-        
-        //cout <<"iterating. stateToInvestigate: " << stateToInvestigate.size() << ", history: " << history.size() << "\r\n";
-        //get the current board state
-        currentState = stateToInvestigate.back();
-        stateToInvestigate.pop_back();
-        
-        //are we at the "clear history" item?
-        while(currentState.robots[0] == Location::Invalid)
-        {
-            assert(history.size() > 0);
-            history.pop_back();
-            if(stateToInvestigate.size() <= 0)
-            {
-                return; // we are done here! The first item that will be in the stateToInvestigate is a "pop history" marker
-            }
-            currentState = stateToInvestigate.back();
-            stateToInvestigate.pop_back();
-        }
-        
-        //add it to history
-        history.push_back(currentState);
-        
-        //also, push a marker in the investigate stack so that we remember to pop the history list when we hit this again. 
-        stateToInvestigate.push_back(PopHistory);
-        
-        //for each piece on the board...
-        for(int r = NUM_ROBOTS - 1; r >= 0; r--) //why backwards? because otherwise the black piece ends up moving the most, not the red piece
-        {
-            possibleMoves.clear();
-            //get the possible moves
-            board->WhereCanThisPieceMove(currentState, r, possibleMoves);
-            
-            //cout << "possible moves: " << possibleMoves.size() << "\r\n";
-            //for each of the possible moves...
-            for(int m = 0; m < possibleMoves.size(); m++)
-            {
-                //construct the new boardstate
-                newState = currentState;
-                newState.robots[r] = possibleMoves[m];
-                
-                //is the move a victory move?
-                //you can't win if the current robot isn't the robot you're trying to move to the target
-                if(r == winningRobot)
-                {
-                    if(possibleMoves[m] == board->GetTarget())
-                    {
-                        //yay! Now, wasn't that worth it? 
-                        history.push_back(newState);
-                        allSolutions.push_back(history);
-                        history.pop_back();
-                        cout << "found a solution\r\n";
-                        cout << "setting new max depth" << history.size() << "\r\n";
-                        if(maxDepth >= history.size())
-                        {
-                            maxDepth = (int) history.size() - 1; // I do it -1 since I want to solve for a shorter solution than the current
-                        }
-                        visitCounts.IncrementCounts(possibleMoves[m].x, possibleMoves[m].y, r);     
-                        
-                        continue;
-                    }
-                }
-                
-                //are we at max depth?
-                if (history.size() >= maxDepth) 
-                {  
-                    //when we are max depth we don't add a move to the investigate list
-                    //cout << "at max depth\r\n";
-                    continue;
-                }
-                else
-                {
-                    
-                    //we do these investigations after checking depth since they are relatively expensive and we're trying to avoid doing them if we can. 
-                    
-                    //we use a reverse iterator since we expect that it's more likely that we'll move back into the same state in recent history rather than older history - for example, moving to a spot, then immediately moving back. 
-                    vector<BoardState>::reverse_iterator itr;
-                    
-                    // iterator to vector element:
-                    itr = find (history.rbegin(), history.rend(), newState);
-                    
-                    //is the move in my history?
-                    if (itr != history.rend())
-                    {
-                        //cout << "already in history\r\n";
-                        //don't move there!
-                        continue;
-                    }
-                    
-                    itr = find(stateToInvestigate.rbegin(), stateToInvestigate.rend(), newState);
-                    
-                    //is the move already in state to investigate?
-                    if(itr != stateToInvestigate.rend())
-                    {
-                        //cout << "already in state to investigate\r\n";
-                        // don't move there!
-                        continue;
-                    }
-                    //cout << "pushing state\r\n";
-                    stateToInvestigate.push_back(newState);
-                    visitCounts.IncrementCounts(possibleMoves[m].x, possibleMoves[m].y, r);     
-                    
-                }
-                
-            }     
-        }
-        
-    }
-    
-}
-
-//depth first search impl
-//returns the set of solutions found in allSolutions
-
-//flaw with this solution: it will often traverse the same solution space multiple times. it does not scale to larger sizes
-
-/*
- need to fix the visit count mechanism for this guy.
- 
-void RicochetSolver::SolveDepthFirst_FavorFewerPieceCounts(int maxDepth, BoardState startingState, int winningRobot, vector<vector<BoardState> > &allSolutions, ostream &out)
-{
-    cout << "start\r\n";
-    assert(allSolutions.size() == 0);
-    allSolutions.clear();
-    
-    vector<BoardState> stateToInvestigate;
-    vector<BoardState> history;
-    
-    vector<Location> possibleMoves;
-    BoardState currentState;
-    BoardState newState;
-    
-    BoardState PopHistory;
-    PopHistory.robots[0] = Location::Invalid;
-    
-    //our starting state is the first thing we investigate!
-    stateToInvestigate.push_back(startingState);
-    
-
-    int iterationCount = 0; 
-    VisitCounter visitCounts;
-    Location boardSize = board->GetSize();
-    assert(20 > boardSize.x);
-    assert(20 > boardSize.y);
-    
-    vector<Location> possibleMovesSortedByPieceCounts;
-
-    while (stateToInvestigate.size() > 0)
-    {
-#ifdef ALG_DEBUG
-        iterationCount++;
-        
-        if(iterationCount >= 10000)
-        {
-            cout << "10k iterations\r\n";
-            iterationCount = 0;
-            
-            visitCounts.IncrementCounts(possibleMoves[m].x, possibleMoves[m].y, r);
-            
-            
-        }
-#endif
-        //cout <<"iterating. stateToInvestigate: " << stateToInvestigate.size() << ", history: " << history.size() << "\r\n";
-        //get the current board state
-        currentState = stateToInvestigate.back();
-        stateToInvestigate.pop_back();
-        
-        //are we at the "clear history" item?
-        while(currentState.robots[0] == Location::Invalid)
-        {
-            assert(history.size() > 0);
-            history.pop_back();
-            if(stateToInvestigate.size() <= 0)
-            {
-                return; // we are done here! The first item that will be in the stateToInvestigate is a "pop history" marker
-            }
-            currentState = stateToInvestigate.back();
-            stateToInvestigate.pop_back();
-        }
-        
-        //add it to history
-        history.push_back(currentState);
-        
-        //also, push a marker in the investigate stack so that we remember to pop the history list when we hit this again. 
-        stateToInvestigate.push_back(PopHistory);
-        
-        //for each piece on the board...
-        for(int r = NUM_ROBOTS - 1; r >= 0; r--) //why backwards? because otherwise the black piece ends up moving the most, not the red piece
-        {
-            int rToIncrement = 0;
-            if(r > 1) 
-            {
-                rToIncrement = 1;
-            }
-            
-            possibleMoves.clear();
-            possibleMovesSortedByPieceCounts.clear();
-            //get the possible moves
-            board->WhereCanThisPieceMove(currentState, r, possibleMoves);
-            
-            //this is ugly.
-            while(possibleMoves.size() > 0)
-            {
-                
-                int smallest = 0;
-                for(int m = 1; m < possibleMoves.size(); m++)
-                {
-               //     cout << "possible move " << m << ": " visitCounts[possibleMoves[m].x][possibleMoves[m].y][r] << "\r\n";
-                    if(visitCounts[possibleMoves[m].x][possibleMoves[m].y][rToIncrement] < visitCounts[possibleMoves[smallest].x][possibleMoves[smallest].y][rToIncrement])
-                    {
-                        smallest = m;
-                    }
-                }
-                possibleMovesSortedByPieceCounts.push_back(possibleMoves[smallest]);
-                possibleMoves.erase(possibleMoves.begin() + smallest);
-           //     cout << "possible move chosen " << ": " << (int) possibleMovesSortedByPieceCounts.back().x << "," << (int) possibleMovesSortedByPieceCounts.back().y << "\r\n";
-            }
-            
-            
-            
-            //cout << "possible moves: " << possibleMoves.size() << "\r\n";
-            //for each of the possible moves...
-            for(int m = 0; m < possibleMovesSortedByPieceCounts.size(); m++)
-            {
-                //construct the new boardstate
-                newState = currentState;
-                newState.robots[r] = possibleMovesSortedByPieceCounts[m];
-                
-                //is the move a victory move?
-                //you can't win if the current robot isn't the robot you're trying to move to the target
-                if(r == winningRobot)
-                {
-                    if(possibleMovesSortedByPieceCounts[m] == board->GetTarget())
-                    {
-                        //yay! Now, wasn't that worth it? 
-                        history.push_back(newState);
-                        allSolutions.push_back(history);
-                        history.pop_back();
-                        cout << "found a solution\r\n";
-                        cout << "setting new max depth" << history.size() << "\r\n";
-                        if(maxDepth >= history.size())
-                        {
-                            maxDepth = (int) history.size() - 1; // I do it -1 since I want to solve for a shorter solution than the current
-                        }
-
-                        
-                        
-                        visitCounts[possibleMovesSortedByPieceCounts[m].x][possibleMovesSortedByPieceCounts[m].y][rToIncrement]++;
-                        
-                        
-#ifdef ALG_DEBUG
-                        visitCountsChange[possibleMovesSortedByPieceCounts[m].x][possibleMovesSortedByPieceCounts[m].y][rToIncrement]++;
-#endif
-                        
-                        continue;
-                    }
-                }
-                
-                //are we at max depth?
-                if (history.size() >= maxDepth) 
-                {  
-                    //when we are max depth we don't add a move to the investigate list
-                    //cout << "at max depth\r\n";
-                    continue;
-                }
-                else
-                {
-                    
-                    //we do these investigations after checking depth since they are relatively expensive and we're trying to avoid doing them if we can. 
-                    
-                    //we use a reverse iterator since we expect that it's more likely that we'll move back into the same state in recent history rather than older history - for example, moving to a spot, then immediately moving back. 
-                    vector<BoardState>::reverse_iterator itr;
-                    
-                    // iterator to vector element:
-                    itr = find (history.rbegin(), history.rend(), newState);
-                    
-                    //is the move in my history?
-                    if (itr != history.rend())
-                    {
-                        //cout << "already in history\r\n";
-                        //don't move there!
-                        continue;
-                    }
-                    
-                    itr = find(stateToInvestigate.rbegin(), stateToInvestigate.rend(), newState);
-                    
-                    //is the move already in state to investigate?
-                    if(itr != stateToInvestigate.rend())
-                    {
-                        //cout << "already in state to investigate\r\n";
-                        // don't move there!
-                        continue;
-                    }
-                    //cout << "pushing state\r\n";
-                    stateToInvestigate.push_back(newState);
-                    
-
-                    visitCounts[possibleMovesSortedByPieceCounts[m].x][possibleMovesSortedByPieceCounts[m].y][rToIncrement]++;
-                    
-                    
-#ifdef ALG_DEBUG
-                    visitCountsChange[possibleMovesSortedByPieceCounts[m].x][possibleMovesSortedByPieceCounts[m].y][rToIncrement]++;
-#endif
-
-                    
-                }
-                
-            }     
-        }
-        
-    }
-    
-}
-
-*/
-
-
+// output the set of moves that the algorithm was considering and what moves it actually kept for investigation
+// see class level notes in solver.h 
 void RicochetSolver::DebugSuggestedMoves::Print(ostream &out, RicochetSolver *solver, BoardState startingState, int color)
 {
+#ifdef ALG_DEBUG_SUGGESTED_MOVES
     out << "<td>";
     solver->board->PrintMoves(startingState, _possibleMoves, out, color);
     out << "</td><td>";
     solver->board->PrintMoves(startingState, _actualMoves, out, color);
     out << "</td>";
+#endif
 }
 
+// see class level notes in solver.h
 void RicochetSolver::DebugSuggestedMoves::AddPossibleMoves(vector<Location> &possibleMoves)
 {
+    #ifdef ALG_DEBUG_SUGGESTED_MOVES
     _possibleMoves.insert(_possibleMoves.end(), possibleMoves.begin(), possibleMoves.end());
     _actualMoves.insert(_actualMoves.end(), possibleMoves.begin(), possibleMoves.end()); 
+#endif
 }
-
+// see class level notes in solver.h
 void RicochetSolver::DebugSuggestedMoves::RemoveMove(Location &move)
 {
+#ifdef ALG_DEBUG_SUGGESTED_MOVES
     vector<Location>::iterator itr = find(_actualMoves.begin(), _actualMoves.end(), move);
     
     assert(itr != _actualMoves.end());
     _actualMoves.erase(itr);
+#endif
 }
 
+// see class level notes in solver.h
 void RicochetSolver::DebugSuggestedMoves::Clear()
 {
+#ifdef ALG_DEBUG_SUGGESTED_MOVES
     _possibleMoves.clear();
     _actualMoves.clear(); 
+#endif
+}
+
+void RicochetSolver::DebugSuggestedMoves::StartBoardState(ostream &out)
+{
+#ifdef ALG_DEBUG_SUGGESTED_MOVES
+    out << "<table><tr>";
+#endif
+}
+
+void RicochetSolver::DebugSuggestedMoves::EndBoardState(ostream &out)
+{
+#ifdef ALG_DEBUG_SUGGESTED_MOVES
+    out << "</tr></table>";
+#endif
+    
 }
 
 
-//depth first search impl
-//returns the set of solutions found in allSolutions
+// depth first search impl
+// This is where all the sexy stuff happens
+//
 
-//flaw with this solution: it will often traverse the same solution space multiple times. it does not scale to larger sizes
+// Given a starting state, this function will find the smallest number of movest that will move robot 0 into the target location on the board. 
+//
+// This function uses a depth first search strategy to do so. From the starting position, we look for all possible moves from that position, putting them in a stack. We then go through the stack, looking at each move possible from that state, and storing them in the stack. We store the list of all past states already looked at in a hash table wrapped by the  "all past states investigated" class. Before we add new elements to the stack, we check to see whether we've already stored that state before in the hash table. If we have already stored the state, we don't re-investigate the state *except* when we got to the state in fewer moves this time - in that case, we re-examine it.
+
+// Why do we store past states seen? If we don't, we'll continually re-examine the same states again and again. Once you get a fair sized board, the history stack isn't enough to prevent you from re-examining the same areas again and again.
+
+// Why do we store the number of moves it took to get to a given location? If the first time you get to a given board state it wasn't the most efficient way to get there, you will block yourself from finding the more efficient way to get there later. 
+
+// One avenue for future investigation is whether breadth first search or depth first search are more efficient in terms of storage & # of iterations it takes to find the solution. 
+
+// maxDepth - the solution found will have a certain # of moves. maxDepth defines the maximum number of moves that will be considered for a solution
+// startingState - the position of the pieces at the start
+// allSolutions - Returns a list of histories. Each history is stored as a vector of boardstates. Those boardstates represent the moves that were made to get to the solution. The shortest one should be considered the true solution. Should be empty when passed in to the function. 
+// out - debug out stream. Some comments will go to cout, but any debugging which involves printing out the state of the board will be streamed to this parameter
 void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState startingState, int winningRobot, vector<vector<BoardState> > &allSolutions, ostream &out)
 {
     cout << "start\r\n";
     assert(allSolutions.size() == 0);
     allSolutions.clear();
     
+    // Treated as a stack. Holds the complete set of moves that we're going to investigate at some point in the future + directions on how to handle
     vector<BoardState> stateToInvestigate;
-    vector<BoardState> history;
     
-    vector<Location> possibleMoves;
-    BoardState currentState;
-    BoardState newState;
+    //when we see this state pop off the stateToInvestigate stack, it means that we need to pop an element off of the history stack. When we are investigating a state, we push this element on stateToInvestigate, and then push the set of states that represent potential moves from that location. At the same time, we push the current state on the history stack. 
     
     BoardState PopHistory;
     PopHistory.robots[0] = Location::Invalid;
+    
+    // Treated as a stack. As the algorithm investigates various potential solutions to the board, this holds the complete history of how we got here. This will be added to allSolutions if the current solution turns out to be true
+    vector<BoardState> history;
+    
+    // from the current position, what are all the moves that we could make, regardless of whether we've been to them before
+    vector<Location> possibleMoves;
+    BoardState currentState;
+    BoardState newState;
     
     //our starting state is the first thing we investigate!
     stateToInvestigate.push_back(startingState);
@@ -686,8 +390,9 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
     assert(20 > boardSize.x);
     assert(20 > boardSize.y);
     
+    // the states filter tells us wheter or not we're allowed to investigate a given move
     AllPastStatesInvestigatedFilter statesFilter;
-    //DebugSuggestedMoves debugSuggestedMoves;
+    DebugSuggestedMoves debugSuggestedMoves;
     
     while (stateToInvestigate.size() > 0)
     {
@@ -702,7 +407,6 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
             visitCounts.PrintCounts(startingState, winningRobot, out, board);
         }
 
-       // cout <<"iterating. stateToInvestigate: " << stateToInvestigate.size() << ", history: " << history.size() << ", hash table: " <<  statesFilter.size() << "\r\n";
         //get the current board state
         currentState = stateToInvestigate.back();
         stateToInvestigate.pop_back();
@@ -726,19 +430,18 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
         
         //also, push a marker in the investigate stack so that we remember to pop the history list when we hit this again. 
         stateToInvestigate.push_back(PopHistory);
-        
-       // out << "<table><tr>";
+       
+        debugSuggestedMoves.StartBoardState(out);
         
         //for each piece on the board...
         for(int r = 0; r < NUM_ROBOTS; r++) 
         {       
-            //debugSuggestedMoves.Clear();
+            debugSuggestedMoves.Clear();
             possibleMoves.clear();
             //get the possible moves
             board->WhereCanThisPieceMove(currentState, r, possibleMoves);
-            //debugSuggestedMoves.AddPossibleMoves(possibleMoves);
+            debugSuggestedMoves.AddPossibleMoves(possibleMoves);
             
-            //cout << "possible moves: " << possibleMoves.size() << "\r\n";
             //for each of the possible moves...
             for(int m = 0; m < possibleMoves.size(); m++)
             {
@@ -752,7 +455,7 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
                 {
                     if(possibleMoves[m] == board->GetTarget())
                     {
-                        //yay! Now, wasn't that worth it? 
+                        //yay! We found the solution! Now, wasn't that worth it? 
                         history.push_back(newState);
                         allSolutions.push_back(history);
                         history.pop_back();
@@ -760,11 +463,11 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
                         cout << "setting new max depth with -1: " << history.size() << "\r\n";
                         if(maxDepth >= history.size())
                         {
-                            maxDepth = (int) history.size() - 1; // I do it -1 since I want to solve for a shorter solution than the current
+                            maxDepth = (int) history.size() - 1; // I do it -1 since I want to look for a shorter solution than the current
                         }
-                        
+#ifdef ALG_DEBUG_VISIT_COUNTS
                         visitCounts.IncrementCounts(possibleMoves[m].x, possibleMoves[m].y, r);
-
+#endif
                         
                         continue;
                     }
@@ -775,7 +478,7 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
                 {  
                     //when we are max depth we don't add a move to the investigate list
                     //cout << "at max depth\r\n";
-                    //debugSuggestedMoves.RemoveMove(possibleMoves[m]);
+                    debugSuggestedMoves.RemoveMove(possibleMoves[m]);
                     continue;
                 }
                 else
@@ -785,186 +488,34 @@ void RicochetSolver::SolveDepthFirst_withHashedHistory(int maxDepth, BoardState 
                     {
                         //cout << "pushing state\r\n";
                         stateToInvestigate.push_back(newState);
-                        
+#ifdef ALG_DEBUG_VISIT_COUNTS           
                         visitCounts.IncrementCounts(possibleMoves[m].x, possibleMoves[m].y, r);
+#endif
                         
                     }
                     else
                     {
-                        //debugSuggestedMoves.RemoveMove(possibleMoves[m]);
+#ifdef ALG_DEBUG_SUGGESTED_MOVES
+                        debugSuggestedMoves.RemoveMove(possibleMoves[m]);
+#endif
                     }
                 }
                 
                 
             } 
-           //debugSuggestedMoves.Print(out, this, currentState, r); 
+#ifdef ALG_DEBUG_SUGGESTED_MOVES
+           debugSuggestedMoves.Print(out, this, currentState, r); 
+#endif
         } //end of robot loop
-       // out << "</tr></table>";
+       
         
-        
-        
-    }
-    
-}
-
-
-/*
-//depth first search impl
-//returns the set of solutions found in allSolutions
-
-//flaw with this solution: it will often traverse the same solution space multiple times. it does not scale to larger sizes
-void RicochetSolver::SolveDepthFirst_BlackMovesFirst(int maxDepth, BoardState startingState, int winningRobot, vector<vector<BoardState> > &allSolutions, ostream &out)
-{
-    cout << "start\r\n";
-    assert(allSolutions.size() == 0);
-    allSolutions.clear();
-    
-    vector<BoardState> stateToInvestigate;
-    vector<BoardState> history;
-    
-    vector<Location> possibleMoves;
-    BoardState currentState;
-    BoardState newState;
-    
-    BoardState PopHistory;
-    PopHistory.robots[0] = Location::Invalid;
-    
-    //our starting state is the first thing we investigate!
-    stateToInvestigate.push_back(startingState);
-    
-#ifdef ALG_DEBUG
-    int iterationCount = 0; 
-    VisitCounter visitCounts;
-    Location boardSize = board->GetSize();
-    assert(20 > boardSize.x);
-    assert(20 > boardSize.y);
-#endif
-    while (stateToInvestigate.size() > 0)
-    {
-#ifdef ALG_DEBUG 
-        
-        iterationCount++;
-        
-        if(iterationCount >= 1000)
-        {
-            iterationCount = 0;
-            
-            visitCounts.PrintCounts(startingState, winningRobot, out, board);
-            
-            
-        }
-#endif
-        
-        //cout <<"iterating. stateToInvestigate: " << stateToInvestigate.size() << ", history: " << history.size() << "\r\n";
-        //get the current board state
-        currentState = stateToInvestigate.back();
-        stateToInvestigate.pop_back();
-        
-        //are we at the "clear history" item?
-        while(currentState.robots[0] == Location::Invalid)
-        {
-            assert(history.size() > 0);
-            history.pop_back();
-            if(stateToInvestigate.size() <= 0)
-            {
-                return; // we are done here! The first item that will be in the stateToInvestigate is a "pop history" marker
-            }
-            currentState = stateToInvestigate.back();
-            stateToInvestigate.pop_back();
-        }
-        
-        //add it to history
-        history.push_back(currentState);
-        
-        //also, push a marker in the investigate stack so that we remember to pop the history list when we hit this again. 
-        stateToInvestigate.push_back(PopHistory);
-        
-        //for each piece on the board...
-        for(int r = 0; r < NUM_ROBOTS; r++) //why backwards? because otherwise the black piece ends up moving the most, not the red piece
-        {
-            possibleMoves.clear();
-            //get the possible moves
-            board->WhereCanThisPieceMove(currentState, r, possibleMoves);
-            
-            //cout << "possible moves: " << possibleMoves.size() << "\r\n";
-            //for each of the possible moves...
-            for(int m = 0; m < possibleMoves.size(); m++)
-            {
-                //construct the new boardstate
-                newState = currentState;
-                newState.robots[r] = possibleMoves[m];
-                
-                //is the move a victory move?
-                //you can't win if the current robot isn't the robot you're trying to move to the target
-                if(r == winningRobot)
-                {
-                    if(possibleMoves[m] == board->GetTarget())
-                    {
-                        //yay! Now, wasn't that worth it? 
-                        history.push_back(newState);
-                        allSolutions.push_back(history);
-                        history.pop_back();
-                        cout << "found a solution\r\n";
-                        cout << "setting new max depth\r\n";
-                        if(maxDepth >= history.size())
-                        {
-                            maxDepth = (int) history.size() - 1; // I do it -1 since I want to solve for a shorter solution than the current
-                        }
-                        visitCounts.IncrementCounts(possibleMoves[m].x, possibleMoves[m].y, r);
-                        continue;
-                    }
-                }
-                
-                //are we at max depth?
-                if (history.size() >= maxDepth) 
-                {  
-                    //when we are max depth we don't add a move to the investigate list
-                    //cout << "at max depth\r\n";
-                    continue;
-                }
-                else
-                {
-                    
-                    //we do these investigations after checking depth since they are relatively expensive and we're trying to avoid doing them if we can. 
-                    
-                    //we use a reverse iterator since we expect that it's more likely that we'll move back into the same state in recent history rather than older history - for example, moving to a spot, then immediately moving back. 
-                    vector<BoardState>::reverse_iterator itr;
-                    
-                    // iterator to vector element:
-                    itr = find (history.rbegin(), history.rend(), newState);
-                    
-                    //is the move in my history?
-                    if (itr != history.rend())
-                    {
-                        //cout << "already in history\r\n";
-                        //don't move there!
-                        continue;
-                    }
-                    
-                    itr = find(stateToInvestigate.rbegin(), stateToInvestigate.rend(), newState);
-                    
-                    //is the move already in state to investigate?
-                    if(itr != stateToInvestigate.rend())
-                    {
-                        //cout << "already in state to investigate\r\n";
-                        // don't move there!
-                        continue;
-                    }
-                    //cout << "pushing state\r\n";
-                    stateToInvestigate.push_back(newState);
-                    visitCounts.IncrementCounts(possibleMoves[m].x, possibleMoves[m].y, r);
-
-                    
-                }
-                
-            }     
-        }
+        debugSuggestedMoves.EndBoardState(out);
         
     }
     
 }
-*/
 
+//given a set of moves represented by states, output all of the unique positions that robots occupied on the board
 void printBoardStates(Board &board, vector<BoardState> &states, ostream &out)
 {
     vector<BoardOverlay> overlays;
@@ -994,6 +545,8 @@ void printBoardStates(Board &board, vector<BoardState> &states, ostream &out)
     }
     board.print(states[0], out, &overlays);
 }
+
+//for now, this function is the only way to run the solver. Put your board and target in as shown below
 
 void RicochetSolver::TestSolveDepthFirst(ostream &out)
 {

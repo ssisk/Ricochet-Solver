@@ -11,15 +11,15 @@
 #include <fstream>
 #include <assert.h>
 #include <time.h>
-//#include <boost/intrusive/unordered_set.hpp>
-
 #include "boost/functional/hash.hpp"
 
 #pragma once
 
 using namespace std;
 
+// How many robots are on the board? we define the size of several arrays by the NUM_ROBOTS so it needs to be a constant.
 #define NUM_ROBOTS 5
+
 #define INVALID_LOC -1
 #define PRINTBOARD_NOCOLOR 9
 
@@ -68,11 +68,8 @@ struct Location
     static Location Invalid;
 };
 
-// we keep the board in a separate struct so that it doesn't get passed around 
-// we could have just created a pointer to the array inside of BoardState, but the syntax on that is super ugly.
 
-
-
+// a struct that stores the current location of the 5 robots on the board, plus allows comparison, etc...
 struct BoardState
 {
     Location robots[NUM_ROBOTS];
@@ -101,27 +98,23 @@ struct BoardState
         
         return *this;
     }
-    
-    //unordered_multiset_member_hook<> member_hook;
 };
 
 //This allows the boost::hash functionality to work with BoardState
-
 std::size_t hash_value(BoardState const& b);
 
+// used for adding text to printouts of the board
 struct BoardOverlay
 {
     Location loc; // where to put the text
-    char text[5];
-    int robotColor; // the robot to which this color corresponds. PRINTBOARD_NOCOLOR for black
+    char text[5]; // what you want printed
+    int robotColor; // When printing, which color do you want the text printed in? This is the index of the robot to which this color corresponds. PRINTBOARD_NOCOLOR for black
 };
 
-
+// responsible for holding the layout of the static elements of the board like walls/etc...
 class Board
 {
 public: 
-    void print(BoardState state, ostream &out, vector<BoardOverlay> *overlays = NULL);
-  //  Board(short x, short y);
     Board(short x, short y, Location target, BoardLocType brd[] = 0);
     ~Board();
     vector<BoardState> NextStates(BoardState state);
@@ -129,19 +122,22 @@ public:
     {
         return _target;
     }
-
-    static void TestDetermineEdges();
-    static void TestWhereCanThisPieceMove(ostream &out);
-    static void TestPrintBoard(ostream &out);
-    static void TestGet(ostream &out);
     void WhereCanThisPieceMove(BoardState state, int curRobot, vector<Location> &ret);
-
     Location GetSize()
     {
         return size;
     }
-    
+
+    // output the contents of the board
     void PrintMoves(BoardState &state,vector<Location> &moves, ostream &out,int color);
+    void print(BoardState state, ostream &out, vector<BoardOverlay> *overlays = NULL);
+    
+    //unit tests
+    static void TestDetermineEdges();
+    static void TestWhereCanThisPieceMove(ostream &out);
+    static void TestPrintBoard(ostream &out);
+    static void TestGet(ostream &out);
+    
 private: 
     
     void DetermineEdges(int curRobot, BoardState state, BoardLocType x, BoardLocType y, Location &lowerEdge, Location &upperEdge);
@@ -149,6 +145,7 @@ private:
     Location size;
     Location _target;
     BoardLocType *board;
+    // size we stored our 2 dimensional board as a one-dimensional array, this function does the translation
     BoardLocType get(short x, short y)
     {
         assert(x < size.x);

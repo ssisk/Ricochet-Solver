@@ -10,7 +10,6 @@
 		DC1A14E613799830009E30A1 /* Solver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DC1A14E413799830009E30A1 /* Solver.cpp */; };
 		DCBEA137135A4BB4009BA547 /* board.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DCBEA135135A4BB4009BA547 /* board.cpp */; };
 		DCCE564D1348FD8000021975 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DCCE564C1348FD8000021975 /* main.cpp */; };
-		DCCE5656134963E500021975 /* old.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DCCE5654134963E500021975 /* old.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -35,8 +34,6 @@
 		DCCE56481348FD8000021975 /* Ricochet Solver */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Ricochet Solver"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCCE564C1348FD8000021975 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		DCCE564E1348FD8000021975 /* Ricochet_Solver.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = Ricochet_Solver.1; sourceTree = "<group>"; };
-		DCCE5654134963E500021975 /* old.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = old.cpp; sourceTree = "<group>"; };
-		DCCE5655134963E500021975 /* old.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = old.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -79,8 +76,6 @@
 			isa = PBXGroup;
 			children = (
 				DCCE564C1348FD8000021975 /* main.cpp */,
-				DCCE5654134963E500021975 /* old.cpp */,
-				DCCE5655134963E500021975 /* old.h */,
 				DCCE564E1348FD8000021975 /* Ricochet_Solver.1 */,
 				DCBEA135135A4BB4009BA547 /* board.cpp */,
 				DC1A14E413799830009E30A1 /* Solver.cpp */,
@@ -139,7 +134,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				DCCE564D1348FD8000021975 /* main.cpp in Sources */,
-				DCCE5656134963E500021975 /* old.cpp in Sources */,
 				DCBEA137135A4BB4009BA547 /* board.cpp in Sources */,
 				DC1A14E613799830009E30A1 /* Solver.cpp in Sources */,
 			);
